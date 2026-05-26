@@ -331,6 +331,45 @@ h1 { font-size: 1rem; color: #3a3a5c; }
 #clear-btn { background: #f5f5f5; color: #aaa; border: 1px solid #e0e0e0; font-weight: normal; }
 #clear-btn:active { background: #ffe0e0; color: #e84545; }
 
+/* 付箋のみボタン */
+#focus-btn {
+  padding: 6px 12px;
+  border: 1.5px solid #888;
+  border-radius: 14px;
+  background: white;
+  color: #555;
+  font-size: 0.82rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* フォーカスモード：付箋エリア以外を非表示 */
+body.focus-mode #header,
+body.focus-mode #control-bar,
+body.focus-mode #status-row,
+body.focus-mode #unsupported,
+body.focus-mode #bottom-bar { display: none !important; }
+
+/* 戻るボタン（フォーカスモード中だけ表示） */
+#focus-exit {
+  display: none;
+  position: fixed;
+  bottom: 20px;
+  right: 16px;
+  z-index: 600;
+  background: rgba(0,0,0,0.52);
+  color: white;
+  border: none;
+  border-radius: 22px;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: bold;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+body.focus-mode #focus-exit { display: block; }
+
 /* トースト */
 #toast {
   position: fixed; bottom: 80px; left: 50%;
@@ -374,6 +413,7 @@ h1 { font-size: 1rem; color: #3a3a5c; }
 
 <div id="header">
   <h1>🎤 ボイス・カード</h1>
+  <button id="focus-btn" title="付箋のみ表示">⛶ 付箋のみ</button>
   <button id="help-btn">使い方</button>
 </div>
 
@@ -422,6 +462,7 @@ h1 { font-size: 1rem; color: #3a3a5c; }
 </div>
 
 <div id="toast"></div>
+<button id="focus-exit">✕ 戻る</button>
 
 <div id="help-overlay">
   <div id="help-modal">
@@ -873,6 +914,30 @@ document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey)) return;
   if (document.activeElement?.classList.contains('card-text')) return;
   if (e.key.toLowerCase() === 'm') { e.preventDefault(); toggleMic(); }
+});
+
+// =============================================
+// フォーカスモード（付箋のみ表示）
+// =============================================
+function enterFocusMode() {
+  document.body.classList.add('focus-mode');
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
+function exitFocusMode() {
+  document.body.classList.remove('focus-mode');
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+document.getElementById('focus-btn').addEventListener('click', enterFocusMode);
+document.getElementById('focus-exit').addEventListener('click', exitFocusMode);
+// ESCキーや Android「戻る」で全画面解除された場合に同期
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    document.body.classList.remove('focus-mode');
+  }
 });
 
 // =============================================
