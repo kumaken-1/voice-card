@@ -197,21 +197,13 @@ h1 { font-size: 1rem; color: #3a3a5c; }
 .card.c-green  { background: #e8f5e9; border-left-color: #66bb6a; }
 .card.c-orange { background: #fff3e0; border-left-color: #ffa726; }
 
-/* ドラッグハンドル（タッチしやすい幅） */
-.card-handle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  flex-shrink: 0;
-  font-size: 1.2rem;
-  color: #ccc;
+/* カード全体がドラッグ可能 */
+.card {
   cursor: grab;
-  user-select: none;
-  touch-action: none;
-  padding: 12px 0;
 }
-.card-handle:active { cursor: grabbing; }
+.card:active { cursor: grabbing; }
+/* テキスト編集中はカーソルをテキストに戻す */
+.card-text { cursor: text; }
 
 /* 番号バッジ（タップで色変更） */
 .card-num {
@@ -456,7 +448,7 @@ h1 { font-size: 1rem; color: #3a3a5c; }
     <div class="hs">
       <p class="hs-t">🔀 並び替え</p>
       <ul>
-        <li>カード左端の <strong>⠿</strong> をつかんでドラッグ（タッチ対応）。</li>
+        <li>カードをつかんで上下にドラッグ（少し長押しすると動かせます）。</li>
       </ul>
     </div>
 
@@ -608,10 +600,6 @@ function makeEl(card, num) {
   div.className = `card ${card.color} ${card.textColor || 'txt-black'}`;
   div.dataset.id = card.id;
 
-  const handle = document.createElement('span');
-  handle.className = 'card-handle';
-  handle.textContent = '⠿';
-
   const numEl = document.createElement('span');
   numEl.className = 'card-num';
   numEl.textContent = num;
@@ -642,7 +630,6 @@ function makeEl(card, num) {
     setTimeout(() => deleteCard(card.id), 180);
   });
 
-  div.appendChild(handle);
   div.appendChild(numEl);
   div.appendChild(text);
   div.appendChild(txtColorBtn);
@@ -684,7 +671,10 @@ function rebindSortable() {
   if (typeof Sortable === 'undefined') return;
   sortable = Sortable.create(document.getElementById('cards-area'), {
     animation: 200,
-    handle: '.card-handle',
+    delay: 150,
+    delayOnTouchOnly: true,
+    filter: '.card-text, .card-del, .card-txtcolor, .card-num',
+    preventOnFilter: false,
     ghostClass: 'sortable-ghost',
     chosenClass: 'sortable-chosen',
     onEnd: syncOrder
