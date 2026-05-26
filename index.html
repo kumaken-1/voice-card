@@ -81,6 +81,12 @@ h1 { font-size: 1rem; color: #3a3a5c; }
   background: #4a7cff;
   color: white;
 }
+/* 選択中のタブ名の後ろに編集ヒントを表示 */
+.deck-tab.active .tab-name::after {
+  content: ' ✏';
+  font-size: 0.62rem;
+  opacity: 0.45;
+}
 
 /* コントロールバー */
 #control-bar {
@@ -373,13 +379,16 @@ h1 { font-size: 1rem; color: #3a3a5c; }
 
 <div id="deck-tabs">
   <button class="deck-tab active" data-deck="1">
-    デッキ1 <span class="tab-count" id="count1">0</span>
+    <span class="tab-name" id="dname1">デッキ1</span>
+    <span class="tab-count" id="count1">0</span>
   </button>
   <button class="deck-tab" data-deck="2">
-    デッキ2 <span class="tab-count" id="count2">0</span>
+    <span class="tab-name" id="dname2">デッキ2</span>
+    <span class="tab-count" id="count2">0</span>
   </button>
   <button class="deck-tab" data-deck="3">
-    デッキ3 <span class="tab-count" id="count3">0</span>
+    <span class="tab-name" id="dname3">デッキ3</span>
+    <span class="tab-count" id="count3">0</span>
   </button>
 </div>
 
@@ -491,6 +500,7 @@ const TEXT_COLORS = ['txt-black','txt-red','txt-blue'];
 let currentDeck  = 1;          // 1〜3
 let currentColor = 'c-yellow';
 let decks        = { 1: [], 2: [], 3: [] }; // {id, text, color}[]
+let deckNames    = { 1: 'デッキ1', 2: 'デッキ2', 3: 'デッキ3' };
 let nextId       = 1;
 let isRecording    = false;
 let pendingCreate  = false;   // ユーザーが意図的に停止したときtrue
@@ -502,16 +512,24 @@ let sortable       = null;
 // 永続化
 // =============================================
 function save() {
-  localStorage.setItem(STORE_KEY, JSON.stringify({ decks, nextId }));
+  localStorage.setItem(STORE_KEY, JSON.stringify({ decks, nextId, deckNames }));
 }
 function load() {
   try {
     const d = JSON.parse(localStorage.getItem(STORE_KEY));
     if (d && d.decks) {
-      decks  = d.decks;
-      nextId = d.nextId || 1;
+      decks      = d.decks;
+      nextId     = d.nextId || 1;
+      deckNames  = Object.assign({ 1:'デッキ1', 2:'デッキ2', 3:'デッキ3' }, d.deckNames || {});
     }
   } catch { decks = {1:[],2:[],3:[]}; nextId = 1; }
+}
+
+function updateTabNames() {
+  [1, 2, 3].forEach(n => {
+    const el = document.getElementById(`dname${n}`);
+    if (el) el.textContent = deckNames[n] || `デッキ${n}`;
+  });
 }
 
 // =============================================
@@ -601,6 +619,7 @@ function render() {
   }
 
   updateTabCounts();
+  updateTabNames();
   updateMicState();
   rebindSortable();
 }
@@ -699,7 +718,19 @@ function rebindSortable() {
 // =============================================
 document.querySelectorAll('.deck-tab').forEach(tab => {
   tab.addEventListener('click', () => {
-    currentDeck = parseInt(tab.dataset.deck);
+    const deckNum = parseInt(tab.dataset.deck);
+    if (deckNum === currentDeck) {
+      // すでに選択中のタブをタップ → 名前変更
+      const current = deckNames[currentDeck];
+      const newName = prompt('デッキ名を変更（最大10文字）', current);
+      if (newName !== null && newName.trim()) {
+        deckNames[currentDeck] = newName.trim().slice(0, 10);
+        save();
+        updateTabNames();
+      }
+      return;
+    }
+    currentDeck = deckNum;
     document.querySelectorAll('.deck-tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     render();
