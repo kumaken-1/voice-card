@@ -484,9 +484,10 @@ let currentDeck  = 1;          // 1〜3
 let currentColor = 'c-yellow';
 let decks        = { 1: [], 2: [], 3: [] }; // {id, text, color}[]
 let nextId       = 1;
-let isRecording  = false;
-let finalText    = '';
-let sortable     = null;
+let isRecording    = false;
+let pendingCreate  = false;   // ユーザーが意図的に停止したときtrue
+let finalText      = '';
+let sortable       = null;
 
 // =============================================
 // 永続化
@@ -734,15 +735,9 @@ function stopRecording() {
 function toggleMic() {
   if (!recognition) return;
   if (isRecording) {
+    // カード生成は onend で行う（モバイルでは stop() 後に onresult が届くため）
+    pendingCreate = true;
     stopRecording();
-    const text = finalText.trim();
-    finalText = '';
-    if (text) {
-      const ok = addCard(text, currentColor);
-      showToast(ok ? 'カードを作りました！' : `このデッキは${MAX_CARDS}枚でいっぱいです`);
-    } else {
-      document.getElementById('status').textContent = 'マイクボタンを押して話すと、カードが作られます';
-    }
   } else {
     finalText = '';
     isRecording = true;
@@ -768,9 +763,26 @@ if (recognition) {
     }
     document.getElementById('interim').textContent = interim;
   };
-  recognition.onend = () => { if (isRecording) recognition.start(); };
+  recognition.onend = () => {
+    if (isRecording) {
+      // continuous モードで自動停止 → 再スタート
+      recognition.start();
+    } else if (pendingCreate) {
+      // ユーザーが停止ボタンを押した → カード生成
+      pendingCreate = false;
+      const text = finalText.trim();
+      finalText = '';
+      if (text) {
+        const ok = addCard(text, currentColor);
+        showToast(ok ? 'カードを作りました！' : `このデッキは${MAX_CARDS}枚でいっぱいです`);
+      } else {
+        document.getElementById('status').textContent = 'マイクボタンを押して話すと、カードが作られます';
+      }
+    }
+  };
   recognition.onerror = e => {
     if (e.error === 'no-speech') return;
+    pendingCreate = false;  // エラー時はカード生成しない
     isRecording = false;
     stopRecording();
   };
